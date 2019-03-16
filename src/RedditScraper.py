@@ -39,30 +39,33 @@ def subreddit_scrape(reddit, subreddit_name, limit):
         # topics_dict["body"].append(submission.selftext)
         # topics_dict["comments"].append(submission.comments)
 
-    return pd.DataFrame(topics_dict)
+    df = pd.DataFrame(topics_dict)
+    df['created'] = df['created'].apply(lambda x: datetime.strftime(datetime.fromtimestamp(x), '%y-%m-%d'))
+    return df
 
-def subreddit_search(reddit, query, subreddit_name, limit):
+def subreddit_search(reddit, subreddit_name, query, limit):
     subreddit = reddit.subreddit(subreddit_name)
 
     topics_dict = {"title": [],
                    "score": [],
                    "created": []}
 
-    for submission in subreddit.search(query=query, limit=limit):
+    for submission in subreddit.search(query=query, sort='top', limit=limit):
         topics_dict["title"].append(submission.title)
         topics_dict["score"].append(submission.score)
         topics_dict["created"].append(submission.created)
 
-
+    df = pd.DataFrame(topics_dict)
+    df['created'] = df['created'].apply(lambda x: datetime.strftime(datetime.fromtimestamp(x), '%Y-%m-%d'))
+    return df
 
 if __name__ == '__main__':
     reddit = praw.Reddit(client_id = 'MOtOkwG9BPu5NQ',
                          client_secret = 'T5z_mQ87qSqlMM9kxDp3a7HWn-g',
                          user_agent = 'CSI4900')
 
-    df = subreddit_scrape(reddit, 'Apple', limit=2000)
-    df['created'] = df['created'].apply(lambda x: datetime.fromtimestamp(x))
-    df.to_csv('../Reddit_Posts/Apple_Subreddit.csv')
-    # print(df['title'])
-    # for i in df['created']:
-    #     print(datetime.utcfromtimestamp(i).strftime('%Y-%m-%d %H:%M:%S'))
+    # apple_subreddit = subreddit_scrape(reddit, 'Apple', limit=2000)
+    # apple_subreddit.to_csv('../Reddit_Posts/Apple_Subreddit.csv')
+
+    apple_worldnews = subreddit_search(reddit, 'Worldnews', query= "Apple", limit=2000)
+    apple_worldnews.to_csv('../Reddit_Posts/Worldnews_Apple.csv')
