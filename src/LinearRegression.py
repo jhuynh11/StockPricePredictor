@@ -24,7 +24,8 @@ forecast_col = 'Close'
 # thus we must replace it with something usable.
 df.fillna(-9999, inplace=True)
 
-forecast_out = int(math.ceil(0.1*len(df))) # 10% of the dataframe
+# forecast_out = int(math.ceil(0.1*len(df))) # 10% of the dataframe
+forecast_out = 30
 df['label'] = df[forecast_col].shift(-forecast_out)
 df.dropna(inplace=True)
 
