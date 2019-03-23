@@ -8,6 +8,7 @@ from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 from matplotlib import style
 import datetime
+from statistics import mean
 
 
 def plotting():
@@ -52,33 +53,90 @@ def plotting():
     plt.show()
 
 
-def make_model(company, model, num_days, sentiment):
+def get_stock_momentum(num_days, closing_prices):
+    momentum = []
+    stock_momentum = []
+
+    for i in range(num_days, len(closing_prices)):
+        momentum.append(1 if closing_prices[i] > closing_prices[i - 1] else -1)
+
+    for i in range(num_days, len(closing_prices)):
+        stock_momentum.append(mean(momentum[i - num_days:i]))
+
+    return stock_momentum
+
+
+def get_sentiment_momentum(num_days, sentiments):
+    momentum = []
+    sentiment_momentum = []
+    for i in range(num_days, len(sentiments)):
+        momentum.append(1 if sentiments[i] > sentiments[i - 1] else -1)
+
+    for i in range(num_days, len(sentiments)):
+        sentiment_momentum.append(mean(momentum[i - num_days:i]))
+
+    return sentiment_momentum
+
+
+def make_model(company, model, num_days, n, sentiment):
 
     df = pd.read_csv('../Consolidated_Data/' + company + '.csv')
-    company_prices = list(df['Close'])
+
+    closing_prices = list(df['Close'])
+    sentiments = list(df['Sentiment'])
 
     # Create feature vectors
     df['HL_PCT'] = (df['High'] - df['Low']) / df['Close'] * 100.0
     df['PCT_change'] = (df['Close'] - df['Open']) / df['Open'] * 100.0
+    df = df[n:]
+    df['Stock_Momentum'] = get_stock_momentum(n, closing_prices)
 
     if sentiment:
-        df = df[['Close', 'HL_PCT', 'PCT_change', 'Volume', 'Sentiment']]
+        df = df[['Close', 'HL_PCT', 'PCT_change', 'Sentiment']]
+        df['Stock_Momentum'] = get_stock_momentum(n, closing_prices)
+        df['Sentiment_Momentum'] = get_sentiment_momentum(n, sentiments)
     else:
-        df = df[['Close', 'HL_PCT', 'PCT_change', 'Volume']]
+        df = df[['Close', 'HL_PCT', 'PCT_change', 'Stock_Momentum']]
 
+    df = df[:len(df)-num_days]
+
+    # Convert input features into array and apply scaling
     X = np.array(df)
+    X = preprocessing.scale(X)
 
+    # Create Y vector; defined as whether a stock will increase or decrease in price in num_days
     Y = []
-    for i in range(num_days, len(df)- num_days):
-        Y.append(1 if company_prices[i+num_days] > company_prices[i] else -1)
-    print(len(Y))
+    for i in range(len(closing_prices)-num_days):
+        Y.append(1 if closing_prices[i+num_days] > closing_prices[i] else -1)
+
+    # Adjust length of Y to match X if needed
+    if len(Y) > len(X):
+        adjustment = len(Y) - len(X)
+        Y = Y[adjustment:]
 
     # Split training and testing sets
-    X_train = np.array(X[0:])
+    training_length = int(len(X) * 0.7)
 
-    # clf = svm.SVC(kernel='rbf')
-    # clf.fit(X_train, y_train)
-    # score = clf.score(X_test, y_test)
-    # print(score)
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.30)
 
-make_model("Apple", "", 1, False)
+    # X_train = np.array(X[0:training_length])
+    # X_test = np.array(X[training_length:])
+    # y_train = np.array(Y[0:training_length])
+    # y_test = np.array(Y[training_length:])
+
+    # Construct and build classifier
+    clf = svm.SVC(kernel='rbf')
+    clf.fit(X_train, y_train)
+
+    score = clf.score(X_test, y_test)
+    return score
+
+
+if __name__ == '__main__':
+    sentiment_score = []
+    no_sentiment = []
+    for i in range(25):
+        sentiment_score.append(make_model("Apple", "", 270, 270, True))
+        no_sentiment.append(make_model("Apple", "", 270, 270, False))
+    print("With sentiment: ", mean(sentiment_score))
+    print("No sentiment: ", mean(no_sentiment))
