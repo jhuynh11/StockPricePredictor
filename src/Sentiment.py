@@ -7,7 +7,7 @@ def classify_apple():
     Classifies the sentiment of every post title in a given file.
     Output: Exports the sentiment file into Reddit_Posts
     """
-    df = pd.read_csv("../Reddit_Posts/Test.csv")
+    df = pd.read_csv("../Reddit_Posts/Worldnews_Apple.csv")
     # Add a sentiment column
     df['Sentiment'] = 0.0
     sid = SentimentIntensityAnalyzer()

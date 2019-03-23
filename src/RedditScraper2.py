@@ -36,7 +36,7 @@ def get_apple():
         before += timedelta(days=1)
 
     df = pd.DataFrame(topics_dict)
-    df.to_csv("../Reddit_Posts/Test.csv")
+    df.to_csv("../Reddit_Posts/Worldnews_Apple.csv")
 
 def get_google():
     pass
