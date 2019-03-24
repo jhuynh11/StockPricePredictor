@@ -63,9 +63,13 @@ def consolidate_apple():
     consolidated.to_csv("../Consolidated_Data/Apple.csv")
 
 
+classify('Amazon')
+consolidate('Amazon', 'AMZN')
+classify('Microsoft')
+consolidate('Microsoft', 'MSFT')
 
-classify('Google')
-consolidate('Google', 'GOOG')
+# classify('Google')
+# consolidate('Google', 'GOOG')
 # classify_apple()
 # consolidate_apple()
 
