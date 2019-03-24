@@ -2,13 +2,13 @@ import pandas as pd
 import math
 import numpy as np
 from sklearn import preprocessing, svm
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import train_test_split, TimeSeriesSplit
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 from matplotlib import style
 import datetime
-from statistics import mean
+from statistics import mean, median
 
 
 def plotting():
@@ -54,6 +54,8 @@ def plotting():
 
 
 def get_stock_momentum(num_days, closing_prices):
+    # Average of a stock's momentum over the past num_days. Each day is labeled 1 if
+    # the closing price that day is higher than the closing price of the day before, and -1 if its lower
     momentum = []
     stock_momentum = []
 
@@ -66,7 +68,25 @@ def get_stock_momentum(num_days, closing_prices):
     return stock_momentum
 
 
+def get_volatility(num_days, closing_prices):
+    # Stock price volatility. This is an average over the past num_days of
+    # percent change in a stock's price per day
+    volatility = []
+    avg_volatility = []
+
+    for i in range(num_days, len(closing_prices)):
+        volatility.append((closing_prices[i] - closing_prices[i-1])/closing_prices[i-1])
+
+    for i in range(num_days, len(closing_prices)):
+        avg_volatility.append(mean(volatility[i - num_days:i]))
+
+    return avg_volatility
+
+
 def get_sentiment_momentum(num_days, sentiments):
+    # Average of a given stock's sentiment over num_days. Each day is labeled
+    # 1 if the sentiment that day is higher than the day before, and -1 if the
+    # price is lower than the day before
     momentum = []
     sentiment_momentum = []
     for i in range(num_days, len(sentiments)):
@@ -90,13 +110,13 @@ def make_model(company, model, num_days, n, sentiment):
     df['PCT_change'] = (df['Close'] - df['Open']) / df['Open'] * 100.0
     df = df[n:]
     df['Stock_Momentum'] = get_stock_momentum(n, closing_prices)
+    df['Volatility'] = get_volatility(n, closing_prices)
 
     if sentiment:
-        df = df[['Close', 'HL_PCT', 'PCT_change', 'Sentiment']]
-        df['Stock_Momentum'] = get_stock_momentum(n, closing_prices)
+        df = df[['Close', 'HL_PCT', 'PCT_change', 'Volatility', 'Stock_Momentum', 'Sentiment']]
         df['Sentiment_Momentum'] = get_sentiment_momentum(n, sentiments)
     else:
-        df = df[['Close', 'HL_PCT', 'PCT_change', 'Stock_Momentum']]
+        df = df[['Close', 'HL_PCT', 'PCT_change', 'Volatility', 'Stock_Momentum']]
 
     df = df[:len(df)-num_days]
 
@@ -124,19 +144,58 @@ def make_model(company, model, num_days, n, sentiment):
     y_test = np.array(Y[training_length:]).astype('float64')
 
     # Construct and build classifier
-    clf = svm.SVC(kernel='rbf')
+    clf = svm.SVC(kernel='rbf', gamma='scale')
     clf.fit(X_train, y_train)
     score = clf.score(X_test, y_test)
-    print(len(y_test))
+    # print(len(y_test))
     return score
 
 
 if __name__ == '__main__':
-    company_list = ['']
+    company_list = ['Apple', 'Google', 'Amazon', 'Microsoft']
     sentiment_score = []
-    no_sentiment = []
-    for i in range(1):
-        sentiment_score.append(make_model("Google", "", 90, 270, True))
-        no_sentiment.append(make_model("Google", "", 90, 270, False))
-    print("With sentiment: ", mean(sentiment_score))
-    print("No sentiment: ", mean(no_sentiment))
+    baseline_score = []
+    baseline_scores_dict = {'Company' : [],
+                              'Forecast_Period': [],
+                              'Num_Days': [],
+                              'Mean': []}
+
+    sentiment_scores_dict = {'Company' : [],
+                              'Forecast_Period': [],
+                              'Num_Days': [],
+                              'Mean': []}
+
+    forecast_ahead = [1, 5, 10, 20, 90, 180, 270]
+    num_days_before = [1, 5, 10, 20, 90, 180, 270]
+
+    for company in company_list:
+        for forecast_period in forecast_ahead:
+            for num_days in num_days_before:
+                sentiment_score.append(make_model(company, "", forecast_period, num_days, True))
+                baseline_score.append(make_model(company, "", forecast_period, num_days, False))
+
+                sentiment_scores_dict['Company'].append(company)
+                sentiment_scores_dict['Forecast_Period'].append(forecast_period)
+                sentiment_scores_dict['Num_Days'].append(num_days)
+                sentiment_scores_dict['Mean'].append(mean(sentiment_score))
+
+                baseline_scores_dict['Company'].append(company)
+                baseline_scores_dict['Forecast_Period'].append(forecast_period)
+                baseline_scores_dict['Num_Days'].append(num_days)
+                baseline_scores_dict['Mean'].append(mean(baseline_score))
+
+                print("Baseline. Forecast Period = %d | Num Days Before = %d" % (forecast_period, num_days))
+                print("Stats: mean %f median %f min %f max %f " % (mean(baseline_score), median(baseline_score),
+                                                                 min(baseline_score), max(baseline_score)))
+                print("Sentiment Model. Forecast Period = %d | Num Days Before = %d" % (forecast_period, num_days))
+                print("Stats: mean %f median %f min %f max %f " % (mean(sentiment_score), median(sentiment_score),
+                                                                 min(sentiment_score), max(sentiment_score)))
+                sentiment_score = []
+                baseline_score = []
+
+    df_baseline = pd.DataFrame(baseline_scores_dict)
+    df_sentiment = pd.DataFrame(sentiment_scores_dict)
+
+    df_baseline.to_csv('../Results/Baseline_Scores.csv')
+    df_sentiment.to_csv('../Results/Sentiment_Scores.csv')
+    print("Done")
