@@ -116,27 +116,27 @@ def make_model(company, model, num_days, n, sentiment):
 
     # Split training and testing sets
     training_length = int(len(X) * 0.7)
+    # X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.30)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.30)
-
-    # X_train = np.array(X[0:training_length])
-    # X_test = np.array(X[training_length:])
-    # y_train = np.array(Y[0:training_length])
-    # y_test = np.array(Y[training_length:])
+    X_train = np.array(X[0:training_length]).astype('float64')
+    X_test = np.array(X[training_length:]).astype('float64')
+    y_train = np.array(Y[0:training_length]).astype('float64')
+    y_test = np.array(Y[training_length:]).astype('float64')
 
     # Construct and build classifier
     clf = svm.SVC(kernel='rbf')
     clf.fit(X_train, y_train)
-
     score = clf.score(X_test, y_test)
+    print(len(y_test))
     return score
 
 
 if __name__ == '__main__':
+    company_list = ['']
     sentiment_score = []
     no_sentiment = []
-    for i in range(25):
-        sentiment_score.append(make_model("Apple", "", 270, 270, True))
-        no_sentiment.append(make_model("Apple", "", 270, 270, False))
+    for i in range(1):
+        sentiment_score.append(make_model("Google", "", 90, 270, True))
+        no_sentiment.append(make_model("Google", "", 90, 270, False))
     print("With sentiment: ", mean(sentiment_score))
     print("No sentiment: ", mean(no_sentiment))
