@@ -5,52 +5,52 @@ from sklearn import preprocessing, svm
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split, TimeSeriesSplit
 from sklearn.metrics import accuracy_score
-import matplotlib.pyplot as plt
-from matplotlib import style
-import datetime
+# import matplotlib.pyplot as plt
+# from matplotlib import style
+# import datetime
 from statistics import mean, median
 
 
-def plotting():
-    style.use('ggplot')
-
-    # Read the data from csv file
-    df = pd.read_csv('../Consolidated_Data/Apple.csv')
-
-    df['HL_PCT'] = (df['High'] - df['Low']) / df['Close'] * 100.0
-    df['PCT_change'] = (df['Close'] - df['Open']) / df['Open'] * 100.0
-
-    df = df[['Close', 'HL_PCT', 'PCT_change', 'Volume', 'Sentiment']]
-    forecast_col = 'Close'
-    df.fillna(value=-99999, inplace=True)
-    forecast_out = int(math.ceil(0.01 * len(df)))
-    df['label'] = df[forecast_col].shift(-forecast_out)
-
-    X = np.array(df.drop(['label'], 1))
-    X = preprocessing.scale(X)
-    X_lately = X[-forecast_out:]
-    X = X[:-forecast_out]
-
-    df.dropna(inplace=True)
-
-    y = np.array(df['label'])
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
-    clf = svm.SVR(kernel="rbf")
-    clf.fit(X_train, y_train)
-    confidence = clf.score(X_test, y_test)
-    print(confidence)
-
-    forecast_set = clf.predict(X_lately)
-    df['Forecast'] = np.nan
-
-
-    # df['Close'].plot()
-    df['Close'].plot()
-    plt.legend(loc=4)
-    plt.xlabel('Date')
-    plt.ylabel('Price')
-    plt.show()
+# def plotting():
+#     style.use('ggplot')
+#
+#     # Read the data from csv file
+#     df = pd.read_csv('../Consolidated_Data/Apple.csv')
+#
+#     df['HL_PCT'] = (df['High'] - df['Low']) / df['Close'] * 100.0
+#     df['PCT_change'] = (df['Close'] - df['Open']) / df['Open'] * 100.0
+#
+#     df = df[['Close', 'HL_PCT', 'PCT_change', 'Volume', 'Sentiment']]
+#     forecast_col = 'Close'
+#     df.fillna(value=-99999, inplace=True)
+#     forecast_out = int(math.ceil(0.01 * len(df)))
+#     df['label'] = df[forecast_col].shift(-forecast_out)
+#
+#     X = np.array(df.drop(['label'], 1))
+#     X = preprocessing.scale(X)
+#     X_lately = X[-forecast_out:]
+#     X = X[:-forecast_out]
+#
+#     df.dropna(inplace=True)
+#
+#     y = np.array(df['label'])
+#
+#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
+#     clf = svm.SVR(kernel="rbf")
+#     clf.fit(X_train, y_train)
+#     confidence = clf.score(X_test, y_test)
+#     print(confidence)
+#
+#     forecast_set = clf.predict(X_lately)
+#     df['Forecast'] = np.nan
+#
+#
+#     # df['Close'].plot()
+#     df['Close'].plot()
+#     plt.legend(loc=4)
+#     plt.xlabel('Date')
+#     plt.ylabel('Price')
+#     plt.show()
 
 
 def get_stock_momentum(num_days, closing_prices):
@@ -98,6 +98,22 @@ def get_sentiment_momentum(num_days, sentiments):
     return sentiment_momentum
 
 
+def get_sentiment_volatility(num_days, sentiments):
+    volatility = []
+    avg_volatility = []
+
+    for i in range(num_days, len(sentiments)):
+        if sentiments[i-1] != 0:
+            volatility.append((sentiments[i] - sentiments[i-1])/sentiments[i-1])
+        else:
+            volatility.append(sentiments[i])
+
+    for i in range(num_days, len(sentiments)):
+        avg_volatility.append(mean(volatility[i - num_days:i]))
+
+    return avg_volatility
+
+
 def make_model(company, model, num_days, n, sentiment):
 
     df = pd.read_csv('../Consolidated_Data/' + company + '.csv')
@@ -113,10 +129,13 @@ def make_model(company, model, num_days, n, sentiment):
     df['Volatility'] = get_volatility(n, closing_prices)
 
     if sentiment:
-        df = df[['Close', 'HL_PCT', 'PCT_change', 'Volatility', 'Stock_Momentum', 'Sentiment']]
+        # df = df[['Close', 'HL_PCT', 'PCT_change', 'Volatility', 'Stock_Momentum']]#, 'Sentiment']]
+        df = df[['Volatility', 'Stock_Momentum']]
         df['Sentiment_Momentum'] = get_sentiment_momentum(n, sentiments)
+        df['Sentiment_Volatility'] = get_sentiment_volatility(n, sentiments)
     else:
-        df = df[['Close', 'HL_PCT', 'PCT_change', 'Volatility', 'Stock_Momentum']]
+        # df = df[['Close', 'HL_PCT', 'PCT_change', 'Volatility', 'Stock_Momentum']]
+        df = df[['Volatility', 'Stock_Momentum']]
 
     df = df[:len(df)-num_days]
 
@@ -147,7 +166,6 @@ def make_model(company, model, num_days, n, sentiment):
     clf = svm.SVC(kernel='rbf', gamma='scale')
     clf.fit(X_train, y_train)
     score = clf.score(X_test, y_test)
-    # print(len(y_test))
     return score
 
 
@@ -155,6 +173,10 @@ if __name__ == '__main__':
     company_list = ['Apple', 'Google', 'Amazon', 'Microsoft']
     sentiment_score = []
     baseline_score = []
+
+    max_baseline_score = []
+    max_sentiment_score = []
+
     baseline_scores_dict = {'Company' : [],
                               'Forecast_Period': [],
                               'Num_Days': [],
@@ -190,12 +212,13 @@ if __name__ == '__main__':
                 print("Sentiment Model. Forecast Period = %d | Num Days Before = %d" % (forecast_period, num_days))
                 print("Stats: mean %f median %f min %f max %f " % (mean(sentiment_score), median(sentiment_score),
                                                                  min(sentiment_score), max(sentiment_score)))
+
                 sentiment_score = []
                 baseline_score = []
 
     df_baseline = pd.DataFrame(baseline_scores_dict)
     df_sentiment = pd.DataFrame(sentiment_scores_dict)
 
-    df_baseline.to_csv('../Results/Baseline_Scores.csv')
-    df_sentiment.to_csv('../Results/Sentiment_Scores.csv')
+    df_baseline.to_csv('../Results/X_Baseline_Scores.csv')
+    df_sentiment.to_csv('../Results/X_Sentiment_Scores.csv')
     print("Done")
