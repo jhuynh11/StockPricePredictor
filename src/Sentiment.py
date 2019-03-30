@@ -1,6 +1,13 @@
 import pandas as pd
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
+"""
+Sentiment.py
+Justin Huynh
+
+Contains functions for classifying Reddit sentiment.
+"""
+
 
 def classify(company):
     """
@@ -31,6 +38,7 @@ def consolidate(company, symbol):
     # Replace null sentiments with 0
     consolidated['Sentiment'].fillna(0, inplace=True)
     consolidated.to_csv("../Consolidated_Data/" + company + ".csv")
+
 
 def classify_apple():
     """
@@ -63,10 +71,13 @@ def consolidate_apple():
     consolidated.to_csv("../Consolidated_Data/Apple.csv")
 
 
-classify('Amazon')
-consolidate('Amazon', 'AMZN')
-classify('Microsoft')
-consolidate('Microsoft', 'MSFT')
+classify('All')
+consolidate('All', 'DJIA')
+print('Done')
+# classify('Amazon')
+# consolidate('Amazon', 'AMZN')
+# classify('Microsoft')
+# consolidate('Microsoft', 'MSFT')
 
 # classify('Google')
 # consolidate('Google', 'GOOG')
