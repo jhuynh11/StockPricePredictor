@@ -101,17 +101,18 @@ def make_model(company, model, num_days, n, sentiment):
     df['Stock_Momentum'] = get_stock_momentum(n, closing_prices)
     df['Volatility'] = get_volatility(n, closing_prices)
     df['Index_Momentum'] = get_stock_momentum(n, df_djia['Close'])
+    df['Index_Volatility'] = get_volatility(n, df_djia['Close'])
 
     if sentiment:
         # df = df[['Close', 'HL_PCT', 'PCT_change', 'Volatility', 'Stock_Momentum']]#, 'Sentiment']]
-        df = df[['Volatility', 'Stock_Momentum', 'Index_Momentum']]
+        df = df[['Volatility', 'Stock_Momentum', 'Index_Momentum', 'Index_Volatility']]
         df['Sentiment_Momentum'] = get_sentiment_momentum(n, sentiments)
         df['Sentiment_Volatility'] = get_sentiment_volatility(n, sentiments)
         df['Index_Sentiment_Momentum'] = get_sentiment_momentum(n, djia_sentiments)
         df['Index_Sentiment_Volatility'] = get_sentiment_volatility(n, djia_sentiments)
     else:
         # df = df[['Close', 'HL_PCT', 'PCT_change', 'Volatility', 'Stock_Momentum']]
-        df = df[['Volatility', 'Stock_Momentum', 'Index_Momentum']]
+        df = df[['Volatility', 'Stock_Momentum', 'Index_Momentum', 'Index_Volatility']]
 
     df = df[:len(df)-num_days]
 
@@ -131,6 +132,7 @@ def make_model(company, model, num_days, n, sentiment):
 
     # Split training and testing sets
     training_length = int(len(X) * 0.7)
+
     # X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.30)
 
     X_train = np.array(X[0:training_length]).astype('float64')
