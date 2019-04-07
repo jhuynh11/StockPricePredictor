@@ -15,7 +15,7 @@ def compare_model_features():
     :return:
     """
 
-    df = pd.read_csv('../Results/Z_Baseline_scores.csv')
+    df = pd.read_csv('../Results/Z_Baseline_Scores.csv')
     df2 = pd.read_csv('../Results/Z_Sentiment_Scores.csv')
 
     df_list = list(df['Mean'])
@@ -35,12 +35,19 @@ def compare_model_features():
 
     res = []
     for i in range(len(s)):
-        if df2_list[s[i]] - df_list[s[i]] > 0.1:
+        if df2_list[s[i]] - df_list[s[i]] > 0:
             res.append(df2_list[s[i]] - df_list[s[i]])
             print(df2_list[s[i]] - df_list[s[i]],
                   df2_company[s[i]], df2_forecast[s[i]],
                   df2_num_days[s[i]])
     print(min(res), max(res), mean(res))
+    print(len(res), len(df2_list))
+
+
+def visualize():
+    df = pd.read_csv('../Results/DJIA.csv')
+    df['Close'].plot()
+    plt.show()
 
 
 def refresh(dictionary):
@@ -82,4 +89,6 @@ def get_key_metrics():
 
     print('Exported key summary stats')
 
+# visualize()
+# compare_model_features()
 get_key_metrics()
