@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import style
-from statistics import mean
+from statistics import mean, median
 
 
 def compare_model_features():
@@ -15,7 +15,7 @@ def compare_model_features():
     :return:
     """
 
-    df = pd.read_csv('../Results/Z_Baseline_scores.csv')
+    df = pd.read_csv('../Results/Z_Baseline_Scores.csv')
     df2 = pd.read_csv('../Results/Z_Sentiment_Scores.csv')
 
     df_list = list(df['Mean'])
@@ -35,12 +35,60 @@ def compare_model_features():
 
     res = []
     for i in range(len(s)):
-        if df2_list[s[i]] - df_list[s[i]] > 0.1:
+        if df2_list[s[i]] - df_list[s[i]] > 0:
             res.append(df2_list[s[i]] - df_list[s[i]])
             print(df2_list[s[i]] - df_list[s[i]],
                   df2_company[s[i]], df2_forecast[s[i]],
                   df2_num_days[s[i]])
     print(min(res), max(res), mean(res))
+    print(len(res), len(df2_list))
 
 
-compare_model_features()
+def visualize():
+    df = pd.read_csv('../Results/DJIA.csv')
+    df['Close'].plot()
+    plt.show()
+
+
+def refresh(dictionary):
+    for key in dictionary:
+        dictionary[key] = []
+    return dictionary
+
+
+def get_key_metrics():
+    df = pd.read_csv('../Results/Z_Baseline_scores.csv')
+    df2 = pd.read_csv('../Results/Z_Sentiment_Scores.csv')
+
+    scores = [('Baseline', df), ('Sentiment', df2)]
+    forecast_periods = [1, 5, 10, 20, 90, 180, 270]
+    num_days = [1, 5, 10, 20, 90, 180, 270]
+
+    results = {'Forecast_Period' : [],
+               'Num_Days': [],
+               'Mean': [],
+               'Median': [],
+               'Min': [],
+               'Max': []}
+
+    for score in scores:
+        for fp in forecast_periods:
+            for n in num_days:
+                forecast_filter = score[1]['Forecast_Period'] == fp
+                days_filter = score[1]['Num_Days'] == n
+                frame = score[1][forecast_filter & days_filter]
+                results['Forecast_Period'].append(fp)
+                results['Num_Days'].append(n)
+                results['Mean'].append(mean(frame['Mean']))
+                results['Median'].append(median(frame['Mean']))
+                results['Min'].append(min(frame['Mean']))
+                results['Max'].append(max(frame['Mean']))
+        df_out = pd.DataFrame(results)
+        df_out.to_csv('../Results/' + score[0] + '_Summary.csv')
+        results = refresh(results)
+
+    print('Exported key summary stats')
+
+# visualize()
+# compare_model_features()
+get_key_metrics()
